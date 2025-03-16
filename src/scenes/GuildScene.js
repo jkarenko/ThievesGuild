@@ -72,13 +72,13 @@ class GuildScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Linear',
             onYoyo: () => {
-                sprite.setFlipX(true);
+                sprite.setFlipX(true); // Flip when moving right
             },
             onRepeat: () => {
-                sprite.setFlipX(false);
+                sprite.setFlipX(false); // Reset to default left-facing when moving left
             },
             onStart: () => {
-                sprite.setFlipX(false);
+                sprite.setFlipX(false); // Start with default left-facing
             }
         });
     }
@@ -109,7 +109,7 @@ class GuildScene extends Phaser.Scene {
             callback: function () {
                 // Get target's current position and calculate direction
                 const targetX = target.x;
-                const currentDirection = target.flipX ? -1 : 1;
+                const currentDirection = target.flipX ? -1 : 1; // -1 when facing right, 1 when facing left (default)
 
                 // Calculate distance to target
                 const distanceToTarget = Math.abs(targetX - follower.x);
@@ -118,10 +118,20 @@ class GuildScene extends Phaser.Scene {
                 if (distanceToTarget <= distance + 20 && !attackInProgress) {
                     attackInProgress = true;
 
+                    // Pause wobble animation if it exists
+                    if (follower.wobbleTween) {
+                        follower.wobbleTween.pause();
+                    }
+
                     // Execute attack animation
                     scene.performAttack(follower, target, () => {
                         // Reset attack flag when animation completes
                         attackInProgress = false;
+
+                        // Resume wobble animation if it exists
+                        if (follower.wobbleTween) {
+                            follower.wobbleTween.resume();
+                        }
                     });
 
                     // Skip movement update during attack
@@ -146,7 +156,7 @@ class GuildScene extends Phaser.Scene {
                     // Determine if guard will move right
                     const movingRight = destinationX > follower.x;
 
-                    // Set flip based on movement direction - only flip when moving right
+                    // Set flip based on movement direction - flip when moving right, default left-facing otherwise
                     follower.setFlipX(movingRight);
 
                     // Create new tween to smoothly move to the new position
@@ -167,24 +177,28 @@ class GuildScene extends Phaser.Scene {
     }
 
     performAttack(attacker, target, onComplete) {
-        // Save original rotation and scale
-        const originalRotation = attacker.rotation;
+        // Save original properties
         const originalScaleX = attacker.scaleX;
         const originalScaleY = attacker.scaleY;
 
-        // Wind up animation (tilt backward)
+        // Sprites face left by default
+        // When not flipped (facing left): Positive rotation = backward, Negative rotation = forward
+        // When flipped (facing right): Negative rotation = backward, Positive rotation = forward
+        const isFlipped = attacker.flipX;
+
+        // Wind up animation (bend backward)
         this.tweens.add({
             targets: attacker,
-            rotation: attacker.flipX ? -0.3 : 0.3, // Tilt backward (opposite of facing direction)
+            rotation: isFlipped ? -0.2 : 0.2, // Rotate backward based on direction
             scaleX: originalScaleX * 1.1,
             scaleY: originalScaleY * 0.9,
             duration: 400,
             ease: 'Sine.easeOut',
             onComplete: () => {
-                // Attack animation (tilt forward quickly)
+                // Attack animation (bend forward quickly)
                 this.tweens.add({
                     targets: attacker,
-                    rotation: attacker.flipX ? 0.4 : -0.4, // Tilt forward (in facing direction)
+                    rotation: isFlipped ? 0.3 : -0.3, // Rotate forward based on direction
                     scaleX: originalScaleX * 1.2,
                     scaleY: originalScaleY * 0.8,
                     duration: 200,
@@ -202,7 +216,7 @@ class GuildScene extends Phaser.Scene {
                                 // Reset attacker to original state
                                 this.tweens.add({
                                     targets: attacker,
-                                    rotation: originalRotation,
+                                    rotation: 0,
                                     scaleX: originalScaleX,
                                     scaleY: originalScaleY,
                                     duration: 300,
@@ -219,7 +233,7 @@ class GuildScene extends Phaser.Scene {
 
     startWobble(sprite, amount, duration) {
         // Create a wobble effect while walking
-        this.tweens.add({
+        sprite.wobbleTween = this.tweens.add({
             targets: sprite,
             scaleX: { from: 0.3, to: 0.32 },
             scaleY: { from: 0.3, to: 0.28 },
@@ -229,6 +243,9 @@ class GuildScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
+
+        // Store reference to the tween on the sprite
+        return sprite.wobbleTween;
     }
 }
 
