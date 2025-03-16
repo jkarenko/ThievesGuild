@@ -25,12 +25,10 @@ class GuildScene extends Phaser.Scene {
         // Create the first sprite (thief) on the left
         const thief = this.add.sprite(screenWidth - 100, centerY, 'Characters', 0);
         thief.setScale(0.3);
-        thief.setFlipX(true); // Start facing left
 
         // Create the second sprite (guard) on the right
         const guard = this.add.sprite(1000, centerY, 'Characters', 1);
         guard.setScale(0.3);
-        guard.setFlipX(true); // Start facing left
 
         // Set up walking for thief - moving left first, across the entire screen
         this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY, 6000);
