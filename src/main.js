@@ -1,5 +1,3 @@
-import Level from "./scenes/Level.js";
-import Preload from "./scenes/Preload.js";
 import GuildScene from "./scenes/GuildScene.js";
 
 window.addEventListener('load', function () {
@@ -15,8 +13,6 @@ window.addEventListener('load', function () {
 		}
 	});
 
-	game.scene.add("Preload", Preload);
-	game.scene.add("Level", Level);
 	game.scene.add("GuildScene", GuildScene);
 	game.scene.add("Boot", Boot, true);
 });
