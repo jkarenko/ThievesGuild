@@ -12,6 +12,12 @@ class GuildScene extends Phaser.Scene {
             startFrame: 0,
             endFrame: 1
         });
+
+        // Load audio sprite sheet
+        this.load.audioSprite('sfx', 'assets/audio/audioSprite.json', [
+            'assets/audio/audioSprite.ogg',
+            'assets/audio/audioSprite.mp3'
+        ]);
     }
 
     create() {
@@ -56,6 +62,11 @@ class GuildScene extends Phaser.Scene {
                     yoyo: true,
                     ease: 'Sine.easeOut'
                 });
+
+                // Play coin sound when thief is clicked
+                if (sprite.texture.key === 'Characters' && sprite.frame.name === 0) {
+                    this.playRandomCoin();
+                }
             });
         });
     }
@@ -209,6 +220,14 @@ class GuildScene extends Phaser.Scene {
                     duration: 50,
                     ease: 'Power2.easeIn',
                     onComplete: () => {
+                        // Play attack sound at the landing phase
+                        this.playRandomAttack();
+
+                        // Play random grunt sound immediately when thief is hit
+                        if (target.texture.key === 'Characters' && target.frame.name === 0) {
+                            this.playRandomGrunt();
+                        }
+
                         // Make target react (small jump and flash)
                         this.tweens.add({
                             targets: target,
@@ -235,6 +254,48 @@ class GuildScene extends Phaser.Scene {
                     }
                 });
             }
+        });
+    }
+
+    playRandomGrunt() {
+        // Select a random grunt sound (1-5)
+        const gruntNumber = Phaser.Math.Between(1, 5);
+        const gruntSound = `grunt${gruntNumber}`;
+
+        // Generate a random pitch between 0.8 and 1.2
+        const randomPitch = Phaser.Math.FloatBetween(0.8, 1.2);
+
+        // Play the selected grunt sound with the random pitch
+        this.sound.playAudioSprite('sfx', gruntSound, {
+            detune: (randomPitch - 1) * 1200 // Convert pitch ratio to cents (1 octave = 1200 cents)
+        });
+    }
+
+    playRandomCoin() {
+        // Select a random coin sound (1-3)
+        const coinNumber = Phaser.Math.Between(1, 3);
+        const coinSound = `coin${coinNumber}`;
+
+        // Generate a random pitch between 0.9 and 1.1
+        const randomPitch = Phaser.Math.FloatBetween(0.9, 1.1);
+
+        // Play the selected coin sound with the random pitch
+        this.sound.playAudioSprite('sfx', coinSound, {
+            detune: (randomPitch - 1) * 1200 // Convert pitch ratio to cents
+        });
+    }
+
+    playRandomAttack() {
+        // Select a random attack sound (1-5)
+        const attackNumber = Phaser.Math.Between(1, 5);
+        const attackSound = `attack${attackNumber}`;
+
+        // Generate a random pitch between 0.9 and 1.1
+        const randomPitch = Phaser.Math.FloatBetween(0.9, 1.1);
+
+        // Play the selected attack sound with the random pitch
+        this.sound.playAudioSprite('sfx', attackSound, {
+            detune: (randomPitch - 1) * 1200 // Convert pitch ratio to cents
         });
     }
 
