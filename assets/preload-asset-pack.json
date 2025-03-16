@@ -5,6 +5,12 @@
                 "url": "assets/guapen.png",
                 "type": "image",
                 "key": "guapen"
+            },
+            {
+                "url": "assets/Sprites.png",
+                "type": "atlas",
+                "key": "Characters",
+                "atlasURL": "assets/Sprites.json"
             }
         ]
     },

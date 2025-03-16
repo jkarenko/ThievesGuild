@@ -24,12 +24,12 @@ window.addEventListener('load', function () {
 class Boot extends Phaser.Scene {
 
 	preload() {
-
+		// Load both asset packs
 		this.load.pack("pack", "assets/preload-asset-pack.json");
+		this.load.pack("pack", "assets/asset-pack.json");
 	}
 
 	create() {
-
 		this.scene.start("GuildScene");
 	}
 }

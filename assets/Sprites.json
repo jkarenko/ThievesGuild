@@ -1,0 +1,52 @@
+{
+    "frames": {
+        "thief": {
+            "frame": {
+                "x": 0,
+                "y": 0,
+                "w": 150,
+                "h": 150
+            },
+            "rotated": false,
+            "trimmed": false,
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 150,
+                "h": 150
+            },
+            "sourceSize": {
+                "w": 150,
+                "h": 150
+            }
+        },
+        "guard": {
+            "frame": {
+                "x": 150,
+                "y": 0,
+                "w": 150,
+                "h": 200
+            },
+            "rotated": false,
+            "trimmed": false,
+            "spriteSourceSize": {
+                "x": 0,
+                "y": 0,
+                "w": 150,
+                "h": 200
+            },
+            "sourceSize": {
+                "w": 150,
+                "h": 200
+            }
+        }
+    },
+    "meta": {
+        "format": "RGBA8888",
+        "size": {
+            "w": 300,
+            "h": 200
+        },
+        "scale": "1"
+    }
+}

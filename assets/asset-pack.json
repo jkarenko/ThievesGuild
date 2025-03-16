@@ -2,22 +2,22 @@
     "section1": {
         "files": [
             {
-                "url": "assets/dino.png",
-                "key": "dino",
-                "type": "image"
-            },
-            {
+                "type": "spritesheet",
+                "key": "Characters",
                 "url": "assets/Sprites.png",
                 "frameConfig": {
-                    "frameWidth": 32,
-                    "frameHeight": 32,
+                    "frameWidth": 600,
+                    "frameHeight": 900,
                     "startFrame": 0,
-                    "endFrame": -1,
+                    "endFrame": 1,
                     "spacing": 0,
                     "margin": 0
-                },
-                "type": "spritesheet",
-                "key": "Sprites"
+                }
+            },
+            {
+                "type": "image",
+                "key": "dino",
+                "url": "assets/dino.png"
             }
         ]
     },
