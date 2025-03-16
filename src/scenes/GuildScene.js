@@ -23,17 +23,19 @@ class GuildScene extends Phaser.Scene {
         const screenWidth = this.cameras.main.width;
 
         // Create the first sprite (thief) on the left
-        const thief = this.add.sprite(screenWidth - 100, centerY + 300, 'Characters', 0);
+        const thief = this.add.sprite(screenWidth - 100, centerY, 'Characters', 0);
         thief.setScale(0.3);
         thief.setOrigin(0.5, 1.0);
+        thief.setDepth(1); // Set z-value so that thief is on top
 
         // Create the second sprite (guard) on the right
-        const guard = this.add.sprite(screenWidth - 200, centerY, 'Characters', 1);
+        const guard = this.add.sprite(screenWidth - 200, centerY + 100, 'Characters', 1);
         guard.setScale(0.3);
         guard.setOrigin(0.5, 1.0);
+        guard.setDepth(0); // Set z-value for guard to be below thief
 
         // Set up walking for thief - moving left first, across the entire screen
-        this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY, 6000);
+        this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY + 100, 6000);
 
         // Make the guard follow the thief with a delay
         this.setupFollowing(guard, thief, 100, 0.3);
@@ -177,9 +179,12 @@ class GuildScene extends Phaser.Scene {
     }
 
     performAttack(attacker, target, onComplete) {
+        // Reset to default scale before starting attack animation
+        attacker.setScale(0.3);
+
         // Save original properties
-        const originalScaleX = attacker.scaleX;
-        const originalScaleY = attacker.scaleY;
+        const originalScaleX = 0.3;
+        const originalScaleY = 0.3;
 
         // Sprites face left by default
         // When not flipped (facing left): Positive rotation = backward, Negative rotation = forward
@@ -190,25 +195,27 @@ class GuildScene extends Phaser.Scene {
         this.tweens.add({
             targets: attacker,
             rotation: isFlipped ? -0.2 : 0.2, // Rotate backward based on direction
-            scaleX: originalScaleX * 1.1,
-            scaleY: originalScaleY * 0.9,
-            duration: 400,
+            scaleX: originalScaleX * 0.9,
+            scaleY: originalScaleY * 1.1,
+            duration: 200,
             ease: 'Sine.easeOut',
             onComplete: () => {
                 // Attack animation (bend forward quickly)
                 this.tweens.add({
                     targets: attacker,
                     rotation: isFlipped ? 0.3 : -0.3, // Rotate forward based on direction
-                    scaleX: originalScaleX * 1.2,
-                    scaleY: originalScaleY * 0.8,
-                    duration: 200,
+                    scaleX: originalScaleX * 1.1,
+                    scaleY: originalScaleY * 0.9,
+                    duration: 50,
                     ease: 'Power2.easeIn',
                     onComplete: () => {
                         // Make target react (small jump and flash)
                         this.tweens.add({
                             targets: target,
                             y: target.y - 30,
-                            alpha: { from: 1, to: 0.5 },
+                            tint: 0xff0000, // Flash red
+                            duration: 50,
+                            yoyo: true,
                             duration: 100,
                             yoyo: true,
                             ease: 'Power1.easeOut',
@@ -219,7 +226,7 @@ class GuildScene extends Phaser.Scene {
                                     rotation: 0,
                                     scaleX: originalScaleX,
                                     scaleY: originalScaleY,
-                                    duration: 300,
+                                    duration: 200,
                                     ease: 'Sine.easeOut',
                                     onComplete: onComplete
                                 });
