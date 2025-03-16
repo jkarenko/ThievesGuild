@@ -85,13 +85,50 @@ class GuildScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Linear',
             onYoyo: () => {
-                sprite.setFlipX(true); // Flip when moving right
+                this.flipSprite(sprite, true); // Flip with animation when moving right
             },
             onRepeat: () => {
-                sprite.setFlipX(false); // Reset to default left-facing when moving left
+                this.flipSprite(sprite, false); // Flip with animation when moving left
             },
             onStart: () => {
                 sprite.setFlipX(false); // Start with default left-facing
+            }
+        });
+    }
+
+    flipSprite(sprite, flipX) {
+        // Pause wobble animation if it exists
+        if (sprite.wobbleTween) {
+            sprite.wobbleTween.pause();
+        }
+
+        // Store the current scale for restoration
+        const originalScaleX = sprite.scaleX;
+        const originalScaleY = sprite.scaleY;
+
+        // First squish horizontally
+        this.tweens.add({
+            targets: sprite,
+            scaleX: 0.05, // Almost flat
+            duration: 150,
+            ease: 'Sine.easeIn',
+            onComplete: () => {
+                // Flip the sprite at the flattest point
+                sprite.setFlipX(flipX);
+
+                // Then expand back
+                this.tweens.add({
+                    targets: sprite,
+                    scaleX: originalScaleX,
+                    duration: 150,
+                    ease: 'Sine.easeOut',
+                    onComplete: () => {
+                        // Resume wobble animation
+                        if (sprite.wobbleTween) {
+                            sprite.wobbleTween.resume();
+                        }
+                    }
+                });
             }
         });
     }
@@ -169,8 +206,10 @@ class GuildScene extends Phaser.Scene {
                     // Determine if guard will move right
                     const movingRight = destinationX > follower.x;
 
-                    // Set flip based on movement direction - flip when moving right, default left-facing otherwise
-                    follower.setFlipX(movingRight);
+                    // Only flip if direction has changed
+                    if (follower.flipX !== movingRight) {
+                        this.flipSprite(follower, movingRight);
+                    }
 
                     // Create new tween to smoothly move to the new position
                     followTween = scene.tweens.add({
