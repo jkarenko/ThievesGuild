@@ -23,12 +23,14 @@ class GuildScene extends Phaser.Scene {
         const screenWidth = this.cameras.main.width;
 
         // Create the first sprite (thief) on the left
-        const thief = this.add.sprite(screenWidth - 100, centerY, 'Characters', 0);
+        const thief = this.add.sprite(screenWidth - 100, centerY + 300, 'Characters', 0);
         thief.setScale(0.3);
+        thief.setOrigin(0.5, 1.0);
 
         // Create the second sprite (guard) on the right
         const guard = this.add.sprite(screenWidth - 200, centerY, 'Characters', 1);
         guard.setScale(0.3);
+        guard.setOrigin(0.5, 1.0);
 
         // Set up walking for thief - moving left first, across the entire screen
         this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY, 6000);
@@ -98,6 +100,9 @@ class GuildScene extends Phaser.Scene {
         // Track the follower's last position to determine movement direction
         let lastX = follower.x;
 
+        // Flag to track if an attack is in progress
+        let attackInProgress = false;
+
         // Update function to check target position and adjust follower
         this.time.addEvent({
             delay: 100,
@@ -105,6 +110,28 @@ class GuildScene extends Phaser.Scene {
                 // Get target's current position and calculate direction
                 const targetX = target.x;
                 const currentDirection = target.flipX ? -1 : 1;
+
+                // Calculate distance to target
+                const distanceToTarget = Math.abs(targetX - follower.x);
+
+                // Check if close enough to attack and not already attacking
+                if (distanceToTarget <= distance + 20 && !attackInProgress) {
+                    attackInProgress = true;
+
+                    // Execute attack animation
+                    scene.performAttack(follower, target, () => {
+                        // Reset attack flag when animation completes
+                        attackInProgress = false;
+                    });
+
+                    // Skip movement update during attack
+                    return;
+                }
+
+                // Skip movement updates if attack is in progress
+                if (attackInProgress) {
+                    return;
+                }
 
                 // If direction changed or no tween exists, create a new follow tween
                 if (currentDirection !== lastDirection || !followTween || !followTween.isPlaying()) {
@@ -136,6 +163,57 @@ class GuildScene extends Phaser.Scene {
             },
             callbackScope: this,
             loop: true
+        });
+    }
+
+    performAttack(attacker, target, onComplete) {
+        // Save original rotation and scale
+        const originalRotation = attacker.rotation;
+        const originalScaleX = attacker.scaleX;
+        const originalScaleY = attacker.scaleY;
+
+        // Wind up animation (tilt backward)
+        this.tweens.add({
+            targets: attacker,
+            rotation: attacker.flipX ? -0.3 : 0.3, // Tilt backward (opposite of facing direction)
+            scaleX: originalScaleX * 1.1,
+            scaleY: originalScaleY * 0.9,
+            duration: 400,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+                // Attack animation (tilt forward quickly)
+                this.tweens.add({
+                    targets: attacker,
+                    rotation: attacker.flipX ? 0.4 : -0.4, // Tilt forward (in facing direction)
+                    scaleX: originalScaleX * 1.2,
+                    scaleY: originalScaleY * 0.8,
+                    duration: 200,
+                    ease: 'Power2.easeIn',
+                    onComplete: () => {
+                        // Make target react (small jump and flash)
+                        this.tweens.add({
+                            targets: target,
+                            y: target.y - 30,
+                            alpha: { from: 1, to: 0.5 },
+                            duration: 100,
+                            yoyo: true,
+                            ease: 'Power1.easeOut',
+                            onComplete: () => {
+                                // Reset attacker to original state
+                                this.tweens.add({
+                                    targets: attacker,
+                                    rotation: originalRotation,
+                                    scaleX: originalScaleX,
+                                    scaleY: originalScaleY,
+                                    duration: 300,
+                                    ease: 'Sine.easeOut',
+                                    onComplete: onComplete
+                                });
+                            }
+                        });
+                    }
+                });
+            }
         });
     }
 
