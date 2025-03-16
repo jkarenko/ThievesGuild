@@ -19,8 +19,11 @@ class GuildScene extends Phaser.Scene {
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
 
+        // Get screen width for full movement
+        const screenWidth = this.cameras.main.width;
+
         // Create the first sprite (thief) on the left
-        const thief = this.add.sprite(500, centerY, 'Characters', 0);
+        const thief = this.add.sprite(screenWidth - 100, centerY, 'Characters', 0);
         thief.setScale(0.3);
         thief.setFlipX(true); // Start facing left
 
@@ -29,8 +32,8 @@ class GuildScene extends Phaser.Scene {
         guard.setScale(0.3);
         guard.setFlipX(true); // Start facing left
 
-        // Set up walking for thief - moving left first
-        this.setupWalkingSimple(thief, 500, 200, centerY, 3000);
+        // Set up walking for thief - moving left first, across the entire screen
+        this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY, 6000);
 
         // Set up walking for guard - moving left first
         this.setupWalkingSimple(guard, 1000, 700, centerY, 4000);
@@ -69,13 +72,13 @@ class GuildScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Linear',
             onYoyo: () => {
-                sprite.setFlipX(true); // Face left when returning
+                sprite.setFlipX(true);
             },
             onRepeat: () => {
-                sprite.setFlipX(false); // Face right when going forward
+                sprite.setFlipX(false);
             },
             onStart: () => {
-                sprite.setFlipX(false); // Face right initially
+                sprite.setFlipX(false);
             }
         });
     }
