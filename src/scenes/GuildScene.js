@@ -38,7 +38,7 @@ class GuildScene extends Phaser.Scene {
         thief.setName('thief'); // Give the thief a name for reference
 
         // Create the second sprite (guard) on the right
-        const guard = this.add.sprite(screenWidth - 200, centerY + 100, 'Characters', 1);
+        const guard = this.add.sprite(screenWidth - 200, centerY, 'Characters', 1);
         guard.setScale(0.3);
         guard.setOrigin(0.5, 1.0);
         guard.setDepth(0); // Set z-value for guard to be below thief
