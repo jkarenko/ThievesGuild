@@ -27,21 +27,28 @@ class GuildScene extends Phaser.Scene {
 
         // Get screen width for full movement
         const screenWidth = this.cameras.main.width;
+        // Get screen height for boundary checking
+        const screenHeight = this.cameras.main.height;
 
         // Create the first sprite (thief) on the left
         const thief = this.add.sprite(screenWidth - 100, centerY, 'Characters', 0);
         thief.setScale(0.3);
         thief.setOrigin(0.5, 1.0);
         thief.setDepth(1); // Set z-value so that thief is on top
+        thief.setName('thief'); // Give the thief a name for reference
 
         // Create the second sprite (guard) on the right
         const guard = this.add.sprite(screenWidth - 200, centerY + 100, 'Characters', 1);
         guard.setScale(0.3);
         guard.setOrigin(0.5, 1.0);
         guard.setDepth(0); // Set z-value for guard to be below thief
+        guard.setName('guard'); // Give the guard a name for reference
+
+        // Initialize guard's originalY for wobble and Y-following
+        guard.originalY = centerY + 100;
 
         // Set up walking for thief - moving left first, across the entire screen
-        this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY + 100, 6000);
+        this.setupWalkingSimple(thief, screenWidth - 100, 100, centerY + 100, 6000, screenHeight);
 
         // Make the guard follow the thief with a delay
         this.setupFollowing(guard, thief, 100, 0.3);
@@ -71,10 +78,24 @@ class GuildScene extends Phaser.Scene {
         });
     }
 
-    setupWalkingSimple(sprite, x1, x2, y, duration) {
+    setupWalkingSimple(sprite, x1, x2, y, duration, screenHeight) {
         // Set initial position
         sprite.x = x1;
         sprite.y = y;
+
+        // Initialize Y velocity property
+        sprite.yVelocity = 0;
+
+        // Store original Y position for wobble calculations
+        sprite.originalY = y;
+
+        // Store screen height for boundary checking
+        sprite.screenHeight = screenHeight;
+
+        // Set top and bottom boundaries (accounting for sprite height and origin)
+        const spriteHeight = sprite.height * sprite.scaleY;
+        sprite.topBoundary = spriteHeight * sprite.originY; // Minimum Y position
+        sprite.bottomBoundary = screenHeight - (spriteHeight * (1 - sprite.originY)); // Maximum Y position
 
         // Create a direct tween that goes back and forth
         this.tweens.add({
@@ -86,13 +107,88 @@ class GuildScene extends Phaser.Scene {
             ease: 'Linear',
             onYoyo: () => {
                 this.flipSprite(sprite, true); // Flip with animation when moving right
+                this.setRandomYVelocity(sprite); // Set random Y velocity when hitting right wall
             },
             onRepeat: () => {
                 this.flipSprite(sprite, false); // Flip with animation when moving left
+                this.setRandomYVelocity(sprite); // Set random Y velocity when hitting left wall
             },
             onStart: () => {
                 sprite.setFlipX(false); // Start with default left-facing
             }
+        });
+
+        // Add update event for Y movement and boundary checking
+        this.time.addEvent({
+            delay: 16, // ~60fps
+            callback: () => this.updateYPosition(sprite),
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    setRandomYVelocity(sprite) {
+        // Generate random Y velocity between -2 and 2
+        sprite.yVelocity = Phaser.Math.FloatBetween(-2, 2);
+    }
+
+    updateYPosition(sprite) {
+        if (!sprite.active) return;
+
+        // For thief: apply Y velocity to sprite's base position
+        if (sprite.yVelocity !== undefined) {
+            sprite.originalY += sprite.yVelocity;
+
+            // Calculate actual Y position (wobble tween will offset from this)
+            const actualY = sprite.originalY;
+
+            // Check boundaries
+            if (actualY <= sprite.topBoundary) {
+                sprite.originalY = sprite.topBoundary;
+                sprite.yVelocity *= -1; // Invert velocity when hitting top
+            } else if (actualY >= sprite.bottomBoundary) {
+                sprite.originalY = sprite.bottomBoundary;
+                sprite.yVelocity *= -1; // Invert velocity when hitting bottom
+            }
+        }
+
+        // Update sprite's Y position with wobble effect
+        if (sprite.wobbleTween && sprite.wobbleTween.isPlaying()) {
+            // Calculate current wobble offset based on tween progress
+            const wobbleProgress = sprite.wobbleTween.progress;
+            const wobbleCycle = Math.sin(wobbleProgress * Math.PI * 2); // Sinusoidal cycle
+            const wobbleOffset = wobbleCycle * sprite.wobbleAmount;
+
+            // Set Y position accounting for wobble
+            sprite.y = sprite.originalY + wobbleOffset;
+        } else {
+            // If no wobble, just set Y directly
+            sprite.y = sprite.originalY;
+        }
+
+        // Update depth based on Y position
+        this.updateDepthBasedOnY(sprite);
+    }
+
+    updateDepthBasedOnY(sprite) {
+        // Store references to sprites if we haven't already
+        if (!this.depthSortedSprites) {
+            this.depthSortedSprites = [
+                this.children.getByName('thief'),
+                this.children.getByName('guard')
+            ].filter(s => s); // Filter out any undefined sprites
+
+            // If we don't have any sprites to sort, exit
+            if (this.depthSortedSprites.length < 2) return;
+        }
+
+        // Sort sprites by Y position (lower Y = higher depth)
+        // This is reversed from before - characters higher on screen appear in front
+        this.depthSortedSprites.sort((a, b) => a.y - b.y);
+
+        // Assign depths based on sorted order
+        this.depthSortedSprites.forEach((sprite, index) => {
+            sprite.setDepth(index);
         });
     }
 
@@ -141,8 +237,9 @@ class GuildScene extends Phaser.Scene {
         // Create a reference to the scene for use in callbacks
         const scene = this;
 
-        // Create a tween that will be updated/restarted when target changes direction
-        let followTween = null;
+        // Create tweens that will be updated/restarted when target changes direction
+        let followXTween = null;
+        let followYTween = null;
 
         // Track the target's direction
         let lastDirection = 0;
@@ -153,12 +250,21 @@ class GuildScene extends Phaser.Scene {
         // Flag to track if an attack is in progress
         let attackInProgress = false;
 
+        // Add update event for Y position and wobble effect
+        this.time.addEvent({
+            delay: 16, // ~60fps
+            callback: () => this.updateYPosition(follower),
+            callbackScope: this,
+            loop: true
+        });
+
         // Update function to check target position and adjust follower
         this.time.addEvent({
             delay: 100,
             callback: function () {
                 // Get target's current position and calculate direction
                 const targetX = target.x;
+                const targetY = target.originalY || target.y; // Use originalY if available (for thief)
                 const currentDirection = target.flipX ? -1 : 1; // -1 when facing right, 1 when facing left (default)
 
                 // Calculate distance to target
@@ -173,6 +279,14 @@ class GuildScene extends Phaser.Scene {
                         follower.wobbleTween.pause();
                     }
 
+                    // Stop movement tweens during attack
+                    if (followXTween && followXTween.isPlaying()) {
+                        followXTween.pause();
+                    }
+                    if (followYTween && followYTween.isPlaying()) {
+                        followYTween.pause();
+                    }
+
                     // Execute attack animation
                     scene.performAttack(follower, target, () => {
                         // Reset attack flag when animation completes
@@ -181,6 +295,14 @@ class GuildScene extends Phaser.Scene {
                         // Resume wobble animation if it exists
                         if (follower.wobbleTween) {
                             follower.wobbleTween.resume();
+                        }
+
+                        // Resume movement tweens after attack
+                        if (followXTween && followXTween.isPlaying()) {
+                            followXTween.resume();
+                        }
+                        if (followYTween && followYTween.isPlaying()) {
+                            followYTween.resume();
                         }
                     });
 
@@ -193,15 +315,18 @@ class GuildScene extends Phaser.Scene {
                     return;
                 }
 
-                // If direction changed or no tween exists, create a new follow tween
-                if (currentDirection !== lastDirection || !followTween || !followTween.isPlaying()) {
-                    // Stop existing tween if it exists
-                    if (followTween) {
-                        followTween.stop();
-                    }
+                // Calculate destination based on target's direction
+                const destinationX = targetX - (distance * currentDirection);
 
-                    // Calculate destination based on target's direction
-                    const destinationX = targetX - (distance * currentDirection);
+                // Use target's Y position with a slight offset for depth perception
+                const destinationY = targetY + 20;
+
+                // If direction changed or no X tween exists, create a new follow X tween
+                if (currentDirection !== lastDirection || !followXTween || !followXTween.isPlaying()) {
+                    // Stop existing X tween if it exists
+                    if (followXTween) {
+                        followXTween.stop();
+                    }
 
                     // Determine if guard will move right
                     const movingRight = destinationX > follower.x;
@@ -211,8 +336,8 @@ class GuildScene extends Phaser.Scene {
                         this.flipSprite(follower, movingRight);
                     }
 
-                    // Create new tween to smoothly move to the new position
-                    followTween = scene.tweens.add({
+                    // Create new tween to smoothly move to the new X position
+                    followXTween = scene.tweens.add({
                         targets: follower,
                         x: destinationX,
                         duration: 1000,
@@ -222,6 +347,23 @@ class GuildScene extends Phaser.Scene {
                     // Update last known direction
                     lastDirection = currentDirection;
                 }
+
+                // Always update Y position with a smooth tween
+                // Stop existing Y tween if it exists
+                if (followYTween && followYTween.isPlaying()) {
+                    followYTween.stop();
+                }
+
+                // Create new tween to smoothly move to the new Y position
+                followYTween = scene.tweens.add({
+                    targets: { y: follower.originalY },
+                    y: destinationY,
+                    duration: 500, // Faster than X movement for more responsive following
+                    ease: 'Sine.easeOut',
+                    onUpdate: function () {
+                        follower.originalY = this.targets[0].y;
+                    }
+                });
             },
             callbackScope: this,
             loop: true
@@ -344,12 +486,16 @@ class GuildScene extends Phaser.Scene {
             targets: sprite,
             scaleX: { from: 0.3, to: 0.32 },
             scaleY: { from: 0.3, to: 0.28 },
-            y: { from: sprite.y, to: sprite.y + amount },
+            // Don't directly modify y property here, as it's handled by updateYPosition
+            // Instead, store the amount for use in updateYPosition
             duration: duration,
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
+
+        // Store wobble amount for use in updateYPosition
+        sprite.wobbleAmount = amount;
 
         // Store reference to the tween on the sprite
         return sprite.wobbleTween;
