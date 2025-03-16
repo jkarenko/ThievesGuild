@@ -19,44 +19,78 @@ class GuildScene extends Phaser.Scene {
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
 
-        // Log available textures to debug
-        console.log('Available textures:', this.textures.list);
+        // Create the first sprite (thief) on the left
+        const thief = this.add.sprite(500, centerY, 'Characters', 0);
+        thief.setScale(0.3);
+        thief.setFlipX(true); // Start facing left
 
-        // Create the first sprite (hooded figure) on the left
-        // Using frame index 0 for the first sprite
-        const hoodedFigure = this.add.sprite(centerX - 150, centerY, 'Characters', 0);
+        // Create the second sprite (guard) on the right
+        const guard = this.add.sprite(1000, centerY, 'Characters', 1);
+        guard.setScale(0.3);
+        guard.setFlipX(true); // Start facing left
 
-        // Create the second sprite (sword holder) on the right
-        // Using frame index 1 for the second sprite
-        const swordHolder = this.add.sprite(centerX + 150, centerY, 'Characters', 1);
+        // Set up walking for thief - moving left first
+        this.setupWalkingSimple(thief, 500, 200, centerY, 3000);
 
-        // Scale down the sprites if needed (since they're 600x900)
-        hoodedFigure.setScale(0.3);
-        swordHolder.setScale(0.3);
+        // Set up walking for guard - moving left first
+        this.setupWalkingSimple(guard, 1000, 700, centerY, 4000);
 
-        // Add some basic interactivity
-        [hoodedFigure, swordHolder].forEach(sprite => {
+        // Add wobble to both characters
+        this.startWobble(thief, 10, 300);
+        this.startWobble(guard, 8, 400);
+
+        // Make sprites interactive
+        [thief, guard].forEach(sprite => {
             sprite.setInteractive();
-
-            // Add hover effect
-            sprite.on('pointerover', () => {
-                sprite.setScale(0.33); // Slightly larger on hover
-            });
-
-            sprite.on('pointerout', () => {
-                sprite.setScale(0.3); // Back to normal size
-            });
-
-            // Add click effect (bounce)
             sprite.on('pointerdown', () => {
+                // Jump when clicked
                 this.tweens.add({
                     targets: sprite,
-                    y: sprite.y - 20,
-                    duration: 100,
+                    y: sprite.y - 50,
+                    duration: 300,
                     yoyo: true,
-                    ease: 'Bounce'
+                    ease: 'Sine.easeOut'
                 });
             });
+        });
+    }
+
+    setupWalkingSimple(sprite, x1, x2, y, duration) {
+        // Set initial position
+        sprite.x = x1;
+        sprite.y = y;
+
+        // Create a direct tween that goes back and forth
+        this.tweens.add({
+            targets: sprite,
+            x: x2,
+            duration: duration,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Linear',
+            onYoyo: () => {
+                sprite.setFlipX(true); // Face left when returning
+            },
+            onRepeat: () => {
+                sprite.setFlipX(false); // Face right when going forward
+            },
+            onStart: () => {
+                sprite.setFlipX(false); // Face right initially
+            }
+        });
+    }
+
+    startWobble(sprite, amount, duration) {
+        // Create a wobble effect while walking
+        this.tweens.add({
+            targets: sprite,
+            scaleX: { from: 0.3, to: 0.32 },
+            scaleY: { from: 0.3, to: 0.28 },
+            y: { from: sprite.y, to: sprite.y + amount },
+            duration: duration,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
         });
     }
 }
